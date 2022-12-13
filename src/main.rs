@@ -12,7 +12,8 @@ use std::collections::BTreeMap;
 
 
 
-#[derive(Debug, Deserialize)]
+
+#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
 #[allow(dead_code)]
 struct Rec { 
     index: u32,
@@ -160,7 +161,7 @@ fn weight(graph:&Vec<(String,String)>,job:&String,salary:&String) -> f32 {
     
 }
 
-fn highest_weight(graph:Vec<(String,String)>,salary:&String) -> String {
+fn highest_weight(graph:&Vec<(String,String)>,salary:&String) -> String {
     // For a given range, the function returns the job with the highest weights
     let mut jobs = connected_to(&graph,&salary);
     let mut tree = BTreeMap::new();
@@ -185,22 +186,69 @@ fn highest_weight(graph:Vec<(String,String)>,salary:&String) -> String {
 
 }
 
-fn predict_salary() {
-    // for a given job, the function will predict the salary using random 
+fn most_connected(graph: &mut Vec<(String,String)>) -> String {
+    // Takes in a graph and finds the job node with the most connections
+    &graph.sort();
+    &graph.dedup();
+    let mut list = BTreeMap::new();
+    for node in &mut graph.iter() { 
+        match list.get(&node.0) {
+            Some(val) => continue,
+            None => list.insert(&node.0,0)
+        };
+    }
+    for node in &mut graph.iter() {
+        *list.get_mut(&node.0).unwrap() += 1;
+    }
+    let mut treevec = Vec::from_iter(list);
+    treevec.sort_by_key(|k| k.1);
+    treevec.reverse();
+    return treevec[0].0.to_string()
+
 }
-fn most_similar() {
-    // takes in a job and prints the most similar job based on salary weights 
+fn most_similar(graph:&Vec<(String,String)>,salary:&String) -> String { 
+    // Function takes in a graph and salary range and returns 2 jobs with the most similar weights 
+    // Similar weights meaning the difference between the weights are the smallest
+    let mut jobs = connected_to(&graph,&salary);
+    let mut tree = BTreeMap::new();
+    for job in &jobs {
+        tree.insert(job,weight(&graph,&job,&salary));
+    }
+    let mut treevec = Vec::from_iter(&tree);
+    let mut output = Vec::new();
+    for job1 in &treevec {
+        for job2 in &treevec {
+            if job1 == job2 || job2 == job1 {
+                continue
+            }else {
+                output.push((job1.0,job2.0,(job1.1-job2.1).abs()))
+            }
+        }
+    }
+    output.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
+    output.reverse();
+    let mut owned_string: String = output[0].0.to_string().to_owned();
+    let another_owned_string: String = " and ".to_owned();
+    let another_owned_string1: String = output[0].1.to_string().to_owned();
+    owned_string.push_str(&another_owned_string);
+    owned_string.push_str(&another_owned_string1);
+    return owned_string
+
+
+
+
 }
+
 
 fn main() {
 	let file = "/Users/ryanice/Desktop/DS HW/DS Project/Project/src/ds_salaries.csv";
     open_file(file);
     let mut vec = read_file(file);
     let mut vec1 = graph(vec);
-    //println!("{:?}",vec1);
-    // print out all the jobs with the associated salary and weights, print out which weights 
-    //let mut test = weight(vec1,"Machine Learning Engineer".to_string(),"$160,000-$200,000".to_string());
-    //println!("{}",test);
-    //connected_to(vec1,"$160,000-$200,000".to_string());
-    highest_weight(vec1,&"$160,000-$200,000".to_string());
+    println!("For this specfic dataset:");
+    println!("The job with the highest weight in with the given salary range of $240,000+ is {}",highest_weight(&vec1,&"$240,000+".to_string()));
+    println!("The job that is most connected to other nodes is {}",most_connected(&mut vec1));
+    println!("The 2 jobs that are most similar to each other for the given salary range of $240,000+ are {}",most_similar(&vec1,&"$240,000+".to_string()));
+    println!("These are just the examples for the highest salary range. If you wanted to find out more information about other salary ranges");
+    println!("then you will have to change the input of these functions to suit your needs. How to use these functions/what they do are detailed in the README/write up");
 }
